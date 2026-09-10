@@ -10,7 +10,7 @@ while read TITLE; do
     while true; do
         read LINE;
 
-        echo "$LINE" >> "knowledge_base/${TITLE}.md"
+        echo "$LINE  " >> "knowledge_base/${TITLE}.md"
 
         if [ -z `echo -n $LINE | tr -d ' '` ]; then
             break
