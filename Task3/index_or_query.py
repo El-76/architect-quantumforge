@@ -24,10 +24,13 @@ OPENAI_DENSE_MODEL_NAME = "text-embedding-3-large"
 LOCAL_DENSE_MODEL_NAME = "codefuse-ai/F2LLM-v2-330M"
 LOCAL_DENSE_MODEL_BATCH_SIZE = 16
 
+DENSE_MODEL_CHUNK_SIZE = 512
+DENSE_MODEL_OVERLAP_TOKENS = 64
+
 SPARSE_MODEL_NAME = "Qdrant/bm25"
 
 QDRANT_URL = "http://localhost:6333"
-QDRANT_COLLECTION_NAME = "wiki"
+QDRANT_COLLECTION_NAME_PREFIX = "wiki"
 QDRANT_UPLOAD_BATCH_SIZE = 128
 
 use_openai = 'OPENAI_API_KEY' in os.environ
@@ -49,6 +52,8 @@ if use_openai:
             input=documents,
         ).data
     ])
+
+    qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-openai'
 else:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -78,6 +83,8 @@ else:
         show_progress_bar=False,
     )
 
+    qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-local'
+
 sparse_model = SparseTextEmbedding(
     model_name=SPARSE_MODEL_NAME,
 )
@@ -98,7 +105,7 @@ def query(query: str, limit: int):
     )
 
     dense_result = qdrant.query_points(
-        collection_name=QDRANT_COLLECTION_NAME,
+        collection_name=qdrant_collection_name,
         query=dense_embeddings[0].tolist(),
         using="dense",
         limit=limit * 2,
@@ -106,7 +113,7 @@ def query(query: str, limit: int):
     ).points
 
     sparse_result = qdrant.query_points(
-        collection_name=QDRANT_COLLECTION_NAME,
+        collection_name=qdrant_collection_name,
         query=SparseVector(
             indices=sparse_embeddings[0].indices.tolist(),
             values=sparse_embeddings[0].values.tolist(),
@@ -189,21 +196,19 @@ def main():
 
         sys.exit()
 
-    chunk_size = 512
-    overlap_tokens = 64
-
-    wiki = sys.stdin.read()
+    wiki = sys.stdin.read().rstrip()
 
     pages = wiki.split("\n\n")
 
     documents = []
     metadata = []
 
-    for page_id, page in enumerate(pages, start=1):
+    for page in pages:
         lines = page.splitlines()
 
-        title = lines[0].strip()
-        content = "\n".join(lines[1:]).strip()
+        page_id = int(lines[0].strip())
+        title = lines[1].strip()
+        content = "\n".join(lines[2:]).strip()
 
         chunk_id = 1
 
@@ -212,7 +217,7 @@ def main():
 
             tokens = encode(text)
 
-            chunk = tokens[0:chunk_size]
+            chunk = tokens[0:DENSE_MODEL_CHUNK_SIZE]
 
             document = decode(chunk)
 
@@ -229,10 +234,13 @@ def main():
 
             chunk_id += 1
 
-            if len(chunk) < chunk_size:
+            if len(chunk) < DENSE_MODEL_CHUNK_SIZE:
                 break
 
-            content = decode(tokens[chunk_size - overlap_tokens:])
+            content = decode(tokens[DENSE_MODEL_CHUNK_SIZE - DENSE_MODEL_OVERLAP_TOKENS:])
+
+    if not use_openai and local_dense_model.max_seq_length > DENSE_MODEL_CHUNK_SIZE:
+        local_dense_model.max_seq_length = DENSE_MODEL_CHUNK_SIZE
 
     dense_embeddings = embed(
         documents,
@@ -245,15 +253,15 @@ def main():
     )
 
     if qdrant.collection_exists(
-        collection_name=QDRANT_COLLECTION_NAME
+        collection_name=qdrant_collection_name
     ):
         qdrant.delete_collection(
-            collection_name=QDRANT_COLLECTION_NAME
+            collection_name=qdrant_collection_name
         )
 
 
     qdrant.create_collection(
-        collection_name=QDRANT_COLLECTION_NAME,
+        collection_name=qdrant_collection_name,
 
         vectors_config={
             "dense": VectorParams(
@@ -271,15 +279,13 @@ def main():
 
     points = []
 
-    for idx, (dense, sparse, meta) in enumerate(
-        zip(
-            dense_embeddings,
-            sparse_embeddings,
-            metadata,
-        )
+    for (dense, sparse, meta) in zip(
+        dense_embeddings,
+        sparse_embeddings,
+        metadata,
     ):
         point = PointStruct(
-            id=idx,
+            id=meta["page_id"] * 1000 + meta["chunk_id"],
 
             vector={
                 "dense": dense.tolist(),
@@ -302,7 +308,7 @@ def main():
         batch = points[start:start + QDRANT_UPLOAD_BATCH_SIZE]
 
         qdrant.upsert(
-            collection_name=QDRANT_COLLECTION_NAME,
+            collection_name=qdrant_collection_name,
             points=batch,
             wait=True,
         )
