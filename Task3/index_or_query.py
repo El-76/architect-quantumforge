@@ -22,7 +22,7 @@ from sentence_transformers import SentenceTransformer
 
 OPENAI_DENSE_MODEL_NAME = "text-embedding-3-large"
 LOCAL_DENSE_MODEL_NAME = "codefuse-ai/F2LLM-v2-330M"
-LOCAL_DENSE_MODEL_BATCH_SIZE = 128
+LOCAL_DENSE_MODEL_BATCH_SIZE = 16
 
 SPARSE_MODEL_NAME = "Qdrant/bm25"
 
