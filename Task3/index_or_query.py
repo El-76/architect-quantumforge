@@ -7,6 +7,7 @@ import tiktoken
 import torch
 
 from fastembed import SparseTextEmbedding
+from loguru import logger
 from openai import OpenAI
 from pathlib import Path
 
@@ -81,6 +82,10 @@ def process_directory(
             hashes[file_id] = md5_hash
 
     return changed_files
+
+logger.remove()
+
+logger.add(sys.stdout, level="INFO", format="<green>{time:YYYY-MM-DD HH:mm:ss}</green> | <level>{level: <8}</level> | {message}")
 
 use_openai = 'OPENAI_API_KEY' in os.environ
 
@@ -272,7 +277,11 @@ def main():
     metadata = []
 
     if len(changed_pages) == 0:
+        logger.info(f"nothing to upload")
+
         exit(0)
+
+    logger.info(f"started processing {len(changed_pages)} new or changed wiki pages")
 
     for (page_id, page) in changed_pages.items():
         lines = page.splitlines()
@@ -398,6 +407,13 @@ def main():
 
         if len(batch) < QDRANT_UPLOAD_BATCH_SIZE:
             break
+
+    count = qdrant.count(
+        collection_name=qdrant_collection_name,
+        exact=True,
+    ).count
+
+    logger.info(f"successfully uploaded {len(points)} chunks from {len(changed_pages)} new or changed wiki pages, total collection size is {count}")
 
 if __name__ == "__main__":
     main()

@@ -276,7 +276,7 @@ def query(query: str, use_openai_embeddings: bool, use_openai_llm: bool) -> str:
         "input": query,
     })
 
-    print(response)
+    # print(response)
 
     return response.content
 

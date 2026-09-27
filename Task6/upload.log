@@ -1,0 +1,24 @@
+2026-09-27 22:44:15 | INFO     | started processing 85 new or changed wiki pages
+2026-09-27 22:47:13 | INFO     | successfully uploaded 115 chunks from 85 new or changed wiki pages, total collection size is 115
+2026-09-27 22:48:16 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:49:17 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:50:15 | INFO     | nothing to upload
+2026-09-27 22:51:15 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:52:17 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:53:16 | INFO     | nothing to upload
+2026-09-27 22:54:16 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:55:16 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:56:16 | INFO     | started processing 2 new or changed wiki pages
+2026-09-27 22:56:17 | INFO     | successfully uploaded 2 chunks from 2 new or changed wiki pages, total collection size is 116
+2026-09-27 22:57:16 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
+2026-09-27 22:58:18 | INFO     | nothing to upload
+2026-09-27 22:59:16 | INFO     | nothing to upload
+2026-09-27 23:00:18 | INFO     | nothing to upload
+/home/maaaah/.pyenv/versions/3.11.16/lib/python3.11/site-packages/qdrant_client/qdrant_client.py:169: RuntimeWarning: Unable to close http connection. Connection was interrupted on the server side
