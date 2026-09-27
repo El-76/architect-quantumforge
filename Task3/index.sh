@@ -4,10 +4,10 @@
 
 echo "Building embeddings with local model..."
 
-time ( find ../Task2/knowledge_base/ -type f -exec cat {} \; | ( env -u OPENAI_API_KEY python index_or_query.py ) )
+time ( env -u OPENAI_API_KEY python index_or_query.py --wiki ../Task2/knowledge_base --hashes ./hashes-local.txt )
 
 echo
 
 echo "Building embeddings with OpenAI..."
 
-time ( find ../Task2/knowledge_base/ -type f -exec cat {} \; | python index_or_query.py )
+time python index_or_query.py --wiki ../Task2/knowledge_base --hashes ./hashes-openai.txt

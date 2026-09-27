@@ -1,4 +1,5 @@
 import argparse
+import hashlib
 import numpy
 import os
 import sys
@@ -7,15 +8,19 @@ import torch
 
 from fastembed import SparseTextEmbedding
 from openai import OpenAI
+from pathlib import Path
 
 from qdrant_client import QdrantClient
 from qdrant_client.models import (
     Distance,
-    VectorParams,
-    SparseVectorParams,
-    SparseVector,
-    PointStruct,
+    FieldCondition,
+    Filter,
+    MatchAny,
     Modifier,
+    PointStruct,
+    SparseVector,
+    SparseVectorParams,
+    VectorParams,
 )
 
 from sentence_transformers import SentenceTransformer
@@ -32,6 +37,50 @@ SPARSE_MODEL_NAME = "Qdrant/bm25"
 QDRANT_URL = "http://localhost:6333"
 QDRANT_COLLECTION_NAME_PREFIX = "wiki"
 QDRANT_UPLOAD_BATCH_SIZE = 128
+
+def load_hashes(hash_file: Path) -> dict[int, str]:
+    hashes = {}
+
+    if not hash_file.exists():
+        return hashes
+
+    with hash_file.open("r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if not line:
+                continue
+
+            file_id_str, md5_hash = line.split(maxsplit=1)
+            hashes[int(file_id_str)] = md5_hash
+
+    return hashes
+
+def save_hashes(hash_file: Path, hashes: dict[int, str]) -> None:
+    with hash_file.open("w", encoding="utf-8") as f:
+        for file_id in sorted(hashes):
+            f.write(f"{file_id} {hashes[file_id]}\n")
+
+def calculate_md5(text: str) -> str:
+    return hashlib.md5(text.encode("utf-8")).hexdigest()
+
+def process_directory(
+    directory: Path,
+    hashes: dict[int, str],
+) -> dict[int, str]:
+    changed_files = {}
+
+    for txt_file in directory.glob("*.txt"):
+        with txt_file.open("r", encoding="utf-8") as f:
+            file_id = int(f.readline().strip())
+            content = f.read()
+
+        md5_hash = calculate_md5(content)
+
+        if hashes.get(file_id) != md5_hash:
+            changed_files[file_id] = content
+            hashes[file_id] = md5_hash
+
+    return changed_files
 
 use_openai = 'OPENAI_API_KEY' in os.environ
 
@@ -187,7 +236,18 @@ def query(query: str, limit: int):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--query")
+    parser.add_argument(
+        "--query",
+        help="query mode"
+    )
+    parser.add_argument(
+        "--wiki",
+        help="path to wiki files directory",
+    )
+    parser.add_argument(
+        "--hashes",
+        help="path to MD5 hashes file",
+    )
 
     args = parser.parse_args()
 
@@ -196,19 +256,29 @@ def main():
 
         sys.exit()
 
-    wiki = sys.stdin.read().rstrip()
+    wiki_directory = Path(args.wiki)
+    hashes_file = Path(args.hashes)
 
-    pages = wiki.split("\n\n")
+    hashes = load_hashes(hashes_file)
+
+    changed_pages = process_directory(
+        directory=wiki_directory,
+        hashes=hashes,
+    )
+
+    save_hashes(hashes_file, hashes)
 
     documents = []
     metadata = []
 
-    for page in pages:
+    if len(changed_pages) == 0:
+        exit(0)
+
+    for (page_id, page) in changed_pages.items():
         lines = page.splitlines()
 
-        page_id = int(lines[0].strip())
-        title = lines[1].strip()
-        content = "\n".join(lines[2:]).strip()
+        title = lines[0].strip()
+        content = "\n".join(lines[1:]).strip()
 
         chunk_id = 1
 
@@ -252,30 +322,41 @@ def main():
         )
     )
 
-    if qdrant.collection_exists(
+    if not qdrant.collection_exists(
         collection_name=qdrant_collection_name
     ):
-        qdrant.delete_collection(
-            collection_name=qdrant_collection_name
+        qdrant.create_collection(
+            collection_name=qdrant_collection_name,
+
+            vectors_config={
+                "dense": VectorParams(
+                    size=dense_embeddings.shape[1],
+                    distance=Distance.COSINE,
+                )
+            },
+
+            sparse_vectors_config={
+                "sparse": SparseVectorParams(
+                    modifier=Modifier.IDF,
+                )
+            },
         )
 
+    page_ids = list(changed_pages.keys())
 
-    qdrant.create_collection(
-        collection_name=qdrant_collection_name,
-
-        vectors_config={
-            "dense": VectorParams(
-                size=dense_embeddings.shape[1],
-                distance=Distance.COSINE,
-            )
-        },
-
-        sparse_vectors_config={
-            "sparse": SparseVectorParams(
-                modifier=Modifier.IDF,
-            )
-        },
-    )
+    if page_ids:
+        qdrant.delete(
+            collection_name=qdrant_collection_name,
+            points_selector=Filter(
+                must=[
+                    FieldCondition(
+                        key="page_id",
+                        match=MatchAny(any=page_ids),
+                    )
+                ]
+            ),
+            wait=True,
+        )
 
     points = []
 
