@@ -5,3 +5,4 @@ docker run --rm -p 8000:8000 -v .:/models ghcr.io/ggml-org/llama.cpp:server -m /
 ./rag_query.sh --openai-embeddings --openai-llm "С кем взаимодействовал Мышь?"
 
 ./bot.sh
+

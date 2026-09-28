@@ -2,7 +2,7 @@
 
 set -e
 
-cd `dirname $0`
+cd "$(dirname "$0")"
 
 if [ ! -f ./d.zip ]; then
     curl -L https://archive.org/download/wikia_dump_20200214/d.zip -O

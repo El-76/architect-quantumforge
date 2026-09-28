@@ -2,27 +2,35 @@ mkdir -p qdrant_storage
 
 docker run -d -p 6333:6333 -p 6334:6334 -v $(pwd)/qdrant_storage:/qdrant/storage:z -u $(id -u):$(id -g) qdrant/qdrant:latest-unprivileged
 
-
 ./index.sh
 
 Building embeddings with local model...
+2026-09-28 21:29:58 | INFO     | started processing 87 new or changed wiki pages
+2026-09-28 21:33:24 | INFO     | successfully uploaded 117 chunks from 87 new or changed wiki pages, total collection size is 117
 
-real    3m12.696s
-user    5m15.782s
-sys     0m42.284s
+real    3m40.937s
+user    5m6.142s
+sys     0m42.507s
 
 Building embeddings with OpenAI...
+2026-09-28 21:33:34 | INFO     | started processing 87 new or changed wiki pages
+2026-09-28 21:33:39 | INFO     | successfully uploaded 142 chunks from 87 new or changed wiki pages, total collection size is 142
 
-real    0m15.546s
-user    0m9.275s
-sys     0m2.335s
+real    0m14.739s
+user    0m9.307s
+sys     0m2.021s
 
 
-curl -s http://localhost:6333/collections/wiki-local | jq .result.indexed_vectors_count
-116
 
-curl -s http://localhost:6333/collections/wiki-openai | jq .result.indexed_vectors_count
-141
+curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
+    "exact": true
+  }' | jq .result.count
+117
+
+curl -s -X POST http://localhost:6333/collections/wiki-openai/points/count   -H 'Content-Type: application/json'   -d '{
+    "exact": true
+  }' | jq .result.count
+142
 
 
 ./query.sh Мышь

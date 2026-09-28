@@ -1,5 +1,7 @@
 #!/bin/bash
 
+cd "$(dirname "$0")"
+
 . ../secret.envsh
 
 echo "Querying with local model..."

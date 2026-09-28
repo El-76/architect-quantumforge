@@ -69,8 +69,8 @@ crontab -e
 ```
 cat /var/log/practicum7/upload.log
 
-2026-09-27 22:44:15 | INFO     | started processing 85 new or changed wiki pages
-2026-09-27 22:47:13 | INFO     | successfully uploaded 115 chunks from 85 new or changed wiki pages, total collection size is 115
+2026-09-27 22:44:15 | INFO     | started processing 86 new or changed wiki pages
+2026-09-27 22:47:13 | INFO     | successfully uploaded 116 chunks from 86 new or changed wiki pages, total collection size is 116
 ```
 
 Смотрим размер коллекции:
@@ -79,7 +79,7 @@ cat /var/log/practicum7/upload.log
 curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
-115
+116
 ```
 
 Смотрим содержимое документов с ID 9 и 86:
@@ -148,7 +148,7 @@ sed -i s/способен/способный/g /var/lib/practicum7/knowledge_bas
 cat /var/log/practicum7/upload.log
 
 2026-09-27 22:56:16 | INFO     | started processing 2 new or changed wiki pages
-2026-09-27 22:56:17 | INFO     | successfully uploaded 2 chunks from 2 new or changed wiki pages, total collection size is 116
+2026-09-27 22:56:17 | INFO     | successfully uploaded 2 chunks from 2 new or changed wiki pages, total collection size is 117
 ```
 
 Смотрим размер коллекции:

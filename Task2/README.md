@@ -32,3 +32,9 @@
 ```
 cat pseudo-wiki.txt | ./split.sh
 ```
+
+4\. Добавлен "отравленный" документ из Задания 5:
+
+```
+cp ../Task5/poisoned_document.txt knowledge_base
+```

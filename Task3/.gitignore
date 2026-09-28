@@ -1,3 +1,4 @@
-qdrant_storage
+qdrant_storage/
 hashes-local.txt
 hashes-openai.txt
+__pycache__/
