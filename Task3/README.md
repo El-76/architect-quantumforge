@@ -1,36 +1,32 @@
-mkdir -p qdrant_storage
+./init.sh
 
-docker run -d -p 6333:6333 -p 6334:6334 -v $(pwd)/qdrant_storage:/qdrant/storage:z -u $(id -u):$(id -g) qdrant/qdrant:latest-unprivileged
-
-./index.sh
 
 Building embeddings with local model...
-2026-09-28 21:29:58 | INFO     | started processing 87 new or changed wiki pages
-2026-09-28 21:33:24 | INFO     | successfully uploaded 117 chunks from 87 new or changed wiki pages, total collection size is 117
+2026-09-29 11:58:52 | INFO     | started processing 86 new, changed or deleted wiki pages
+2026-09-29 12:02:35 | INFO     | successfully uploaded 116 chunks from 86 new or changed wiki pages, 0 pages deleted,  total collection size is 116
 
-real    3m40.937s
-user    5m6.142s
-sys     0m42.507s
+real    4m3.058s
+user    5m45.507s
+sys     0m41.207s
 
 Building embeddings with OpenAI...
-2026-09-28 21:33:34 | INFO     | started processing 87 new or changed wiki pages
-2026-09-28 21:33:39 | INFO     | successfully uploaded 142 chunks from 87 new or changed wiki pages, total collection size is 142
+2026-09-29 12:02:45 | INFO     | started processing 86 new, changed or deleted wiki pages
+2026-09-29 12:02:49 | INFO     | successfully uploaded 141 chunks from 86 new or changed wiki pages, 0 pages deleted,  total collection size is 141
 
-real    0m14.739s
-user    0m9.307s
-sys     0m2.021s
-
+real    0m14.210s
+user    0m8.785s
+sys     0m2.670s
 
 
 curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
-117
+116
 
 curl -s -X POST http://localhost:6333/collections/wiki-openai/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
-142
+141
 
 
 ./query.sh Мышь

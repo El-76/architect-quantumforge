@@ -1,4 +1,5 @@
 d.zip
 dozoryfandomcom-20200214-history.xml.7z
-dump
-extracted-dump
+dump/
+extracted-dump/
+knowledge_base/poisoned_document.txt

@@ -67,8 +67,14 @@ def calculate_md5(text: str) -> str:
 def process_directory(
     directory: Path,
     hashes: dict[int, str],
-) -> dict[int, str]:
+) -> (dict[int, str], dict[int, str], set[int], int, int, int):
+    new_hashes = {}
     changed_files = {}
+    files_to_delete = set()
+
+    new = 0
+    changed = 0
+    deleted = 0
 
     for txt_file in directory.glob("*.txt"):
         with txt_file.open("r", encoding="utf-8") as f:
@@ -77,11 +83,29 @@ def process_directory(
 
         md5_hash = calculate_md5(content)
 
-        if hashes.get(file_id) != md5_hash:
-            changed_files[file_id] = content
-            hashes[file_id] = md5_hash
+        new_hashes[file_id] = md5_hash
 
-    return changed_files
+        old_md5_hash = hashes.get(file_id)
+
+        if old_md5_hash is None:
+            changed_files[file_id] = content
+
+            new += 1
+        else:
+            if old_md5_hash != md5_hash:
+                changed_files[file_id] = content
+
+                files_to_delete.append(file_id)
+
+                changed += 1 
+
+    missing = hashes.keys() - new_hashes.keys()
+
+    deleted = len(missing)
+
+    files_to_delete.update(hashes.keys() - new_hashes.keys())
+
+    return new_hashes, changed_files, files_to_delete, new, changed, deleted
 
 logger.remove()
 
@@ -266,22 +290,22 @@ def main():
 
     hashes = load_hashes(hashes_file)
 
-    changed_pages = process_directory(
+    new_hashes, changed_pages, files_to_delete, new, changed, deleted = process_directory(
         directory=wiki_directory,
         hashes=hashes,
     )
 
-    save_hashes(hashes_file, hashes)
+    save_hashes(hashes_file, new_hashes)
 
     documents = []
     metadata = []
 
-    if len(changed_pages) == 0:
-        logger.info(f"nothing to upload")
+    if new == 0 and changed == 0 and deleted == 0:
+        logger.info(f"nothing to upload or delete")
 
         exit(0)
 
-    logger.info(f"started processing {len(changed_pages)} new or changed wiki pages")
+    logger.info(f"started processing {new + changed + deleted} new, changed or deleted wiki pages")
 
     for (page_id, page) in changed_pages.items():
         lines = page.splitlines()
@@ -321,15 +345,16 @@ def main():
     if not use_openai and local_dense_model.max_seq_length > DENSE_MODEL_CHUNK_SIZE:
         local_dense_model.max_seq_length = DENSE_MODEL_CHUNK_SIZE
 
-    dense_embeddings = embed(
-        documents,
-    )
-
-    sparse_embeddings = list(
-        sparse_model.embed(
-            documents
+    if documents:
+        dense_embeddings = embed(
+            documents,
         )
-    )
+
+        sparse_embeddings = list(
+            sparse_model.embed(
+                documents
+            )
+        )
 
     if not qdrant.collection_exists(
         collection_name=qdrant_collection_name
@@ -351,16 +376,14 @@ def main():
             },
         )
 
-    page_ids = list(changed_pages.keys())
-
-    if page_ids:
+    if files_to_delete:
         qdrant.delete(
             collection_name=qdrant_collection_name,
             points_selector=Filter(
                 must=[
                     FieldCondition(
                         key="page_id",
-                        match=MatchAny(any=page_ids),
+                        match=MatchAny(any=files_to_delete),
                     )
                 ]
             ),
@@ -369,32 +392,32 @@ def main():
 
     points = []
 
-    for (dense, sparse, meta) in zip(
-        dense_embeddings,
-        sparse_embeddings,
-        metadata,
-    ):
-        point = PointStruct(
-            id=meta["page_id"] * 1000 + meta["chunk_id"],
+    if documents:
+        for (dense, sparse, meta) in zip(
+            dense_embeddings,
+            sparse_embeddings,
+            metadata,
+        ):
+            point = PointStruct(
+                id=meta["page_id"] * 1000 + meta["chunk_id"],
 
-            vector={
-                "dense": dense.tolist(),
+                vector={
+                    "dense": dense.tolist(),
 
-                "sparse": SparseVector(
-                    indices=sparse.indices.tolist(),
-                    values=sparse.values.tolist(),
-                ),
-            },
+                    "sparse": SparseVector(
+                        indices=sparse.indices.tolist(),
+                        values=sparse.values.tolist(),
+                    ),
+                },
 
-            payload=meta,
-        )
+                payload=meta,
+            )
 
-        points += [ point ]
-
+            points += [ point ]
 
     start = 0
 
-    while True:
+    while points:
         batch = points[start:start + QDRANT_UPLOAD_BATCH_SIZE]
 
         qdrant.upsert(
@@ -413,7 +436,7 @@ def main():
         exact=True,
     ).count
 
-    logger.info(f"successfully uploaded {len(points)} chunks from {len(changed_pages)} new or changed wiki pages, total collection size is {count}")
+    logger.info(f"successfully uploaded {len(points)} chunks from {new + changed} new or changed wiki pages, {deleted} pages deleted, total collection size is {count}")
 
 if __name__ == "__main__":
     main()

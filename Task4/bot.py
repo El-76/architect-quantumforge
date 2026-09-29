@@ -120,17 +120,16 @@ async def reply(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         guardrail_check_prompt = state_template.get("guardrail_check_prompt", False)
         guardrail_filter_rag = state_template.get("guardrail_filter_rag", False)
 
-    # Safely repeat the exact text message sent by the user
-    await update.message.reply_text(
-        rag.query(
-            update.message.text,
-            use_openai_embeddings,
-            use_openai_llm,
-            guardrail_include_preprompt,
-            guardrail_check_prompt,
-            guardrail_filter_rag
-        )
+    reply, _ = rag.query(
+        update.message.text,
+        use_openai_embeddings,
+        use_openai_llm,
+        guardrail_include_preprompt,
+        guardrail_check_prompt,
+        guardrail_filter_rag
     )
+
+    await update.message.reply_text(reply)
 
 def main() -> None:
     parser = argparse.ArgumentParser(usage="python bot.py [--guardrail GUARDRAIL]")
@@ -138,7 +137,6 @@ def main() -> None:
     parser.add_argument("--guardrail", help="""
         Enables filtering on various stages.
         The list of guardrail stages must be comma separated.
-        Guardrail filtering could be enabled for local LLM only.
 
         preprompt - inlude filtering system preprompt.
         promptcheck - reject harmful potentially prompts.
