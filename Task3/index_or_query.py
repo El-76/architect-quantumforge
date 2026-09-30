@@ -67,7 +67,7 @@ def calculate_md5(text: str) -> str:
 def process_directory(
     directory: Path,
     hashes: dict[int, str],
-) -> (dict[int, str], dict[int, str], set[int], int, int, int):
+) -> tuple[dict[int, str], dict[int, str], set[int], int, int, int]:
     new_hashes = {}
     changed_files = {}
     files_to_delete = set()
