@@ -12,8 +12,8 @@ py7zr
 pymorphy3
 python-telegram-bot
 qdrant-client
-sentence-transformers
+sentence-transformers==5.2.3
 tiktoken
 torch
-transformers
+transformers==4.57.1
 wikiextractor
