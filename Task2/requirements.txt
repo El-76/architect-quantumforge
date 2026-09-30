@@ -1,4 +1,0 @@
-py7zr
-bs4
-lxml
-nltk
