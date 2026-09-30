@@ -1,6 +1,25 @@
-./init.sh
+### Описание
 
+БД эмбеддингов наполняется из каталога ```knowledge_base``` Задачи 2.
 
+Формат файлов этого каталога немного нечестный - он содержит ID файлов - предполагается, что это некий аналог ID страницы в Confluence.
+
+Скрипты из этого задания используются и в других заданиях тоже:
+
+* ```./init.sh``` - запускает Qdrant и производит начальное наполнение БД, копирует в каталог ```qdrant_storage_wiki```, который есть в дереве проетка
+* ```./index.sh``` - заливает изменения файлов, если они были
+* ```query.sh``` - делает запрос к БД, ищет в обеих коллекциях
+* index_or_query_py - этот файл содержит всю логику и вызывается скриптами выше - у него есть два ключа: ```--wiki``` - путь к каталогу с файлами базы знаний и ```--hashes``` - путь к файлам с хешами (см. ниже), также этот файл используется напрямую в Задании 5, модель и коллекция выбираются в зависимости от наличия или отсутствия переменной OPENAI_API_KEY в окружении
+
+Создаётся две коллекции векторов - ```wiki-local``` (локальная модель) и ```wiki-openai``` (OpenAI).
+
+Изменения отслеживаются расчётом хешей файлов, сами хеши пишутся в файлы ```./hashes-local.txt``` и ```./hashes-openai.txt```
+
+### Наполнение БД эмбеддингов
+
+Запускаем ```./init.sh```:
+
+```
 Building embeddings with local model...
 2026-09-29 11:58:52 | INFO     | started processing 86 new, changed or deleted wiki pages
 2026-09-29 12:02:35 | INFO     | successfully uploaded 116 chunks from 86 new or changed wiki pages, 0 pages deleted,  total collection size is 116
@@ -16,18 +35,27 @@ Building embeddings with OpenAI...
 real    0m14.210s
 user    0m8.785s
 sys     0m2.670s
+```
 
+Первый запуск может быть существенно медленнее из-за загрузки моделей.
 
+Проверяем размеры коллекций:
+
+```
 curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
 116
+```
 
+```
 curl -s -X POST http://localhost:6333/collections/wiki-openai/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
 141
+```
 
+### Запросы к БД эмбеддингов
 
 ./query.sh Мышь
 Querying with local model...
