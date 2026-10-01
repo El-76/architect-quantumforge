@@ -357,7 +357,7 @@ def query(
     guardrail_filter_rag: bool
 ) -> (str, int):
     if guardrail_check_prompt and not guard_input(query):
-        return "Извините, я не могу обработать этот запрос."
+        return "Извините, я не могу обработать этот запрос.", 0
 
     if use_openai_llm:
         if guardrail_include_preprompt:
@@ -418,7 +418,7 @@ def query(
 
         return response['answer'].content, response['chunk_count']
     except NoSafeDocuments:
-        return "Все найденные документы были отклонены системой безопасности."
+        return "Все найденные документы были отклонены системой безопасности.", 0
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(usage="python rag.py [--openai-embeddings] [--openai-llm] [--guardrail GUARDRAIL] --model <query string>")
