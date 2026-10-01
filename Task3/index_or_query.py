@@ -95,7 +95,7 @@ def process_directory(
             if old_md5_hash != md5_hash:
                 changed_files[file_id] = content
 
-                files_to_delete.append(file_id)
+                files_to_delete.add(file_id)
 
                 changed += 1 
 
@@ -130,8 +130,6 @@ if use_openai:
             input=documents,
         ).data
     ])
-
-    qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-openai'
 else:
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -161,7 +159,7 @@ else:
         show_progress_bar=False,
     )
 
-    qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-local'
+qdrant_collection_name = None
 
 sparse_model = SparseTextEmbedding(
     model_name=SPARSE_MODEL_NAME,
@@ -277,8 +275,21 @@ def main():
         "--hashes",
         help="path to MD5 hashes file",
     )
+    parser.add_argument(
+        "--collection",
+        help="Qdrant collection name",
+    )
 
     args = parser.parse_args()
+
+    global qdrant_collection_name
+
+    if args.collection is not None:
+        qdrant_collection_name = args.collection
+    elif use_openai:
+        qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-openai'
+    else:
+        qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-local'
 
     if args.query is not None:
         query(args.query, 5)

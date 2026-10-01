@@ -38,7 +38,11 @@ pyenv global 3.11.16
 pip install -r requirements.txt
 ```
 
-Также необходим Docker.
+Также необходимы Docker, утилиты make и jq.  
+
+Нужен sudo на хосте.  
+
+Возможно потребуется VPN для загрузки ресурсов.  
 
 ### Секреты
 

@@ -1,91 +1,63 @@
-## Модельный скрипт
+## Модельный скрипт - описание
 
-Модельный скрипт смотрит в каталог, детектирует изменения, считая хеши и храня их в отдельном файле, и записывает вектора в Qdrant.
+Модельный скрипт смотрит в каталог, детектирует изменения, считая хеши и сохраняя их в отдельном файле, и записывает вектора в Qdrant.  
 
-Обновляться будет только БД локальной модели (для обновления OpenAI нужно повторить те же шаги, модифицировав upload.sh , ключи см. в Задании 3).
+Обновляться будет только БД локальной модели.  
 
-Здесь и далее предполагается, что установлен pyenv и в нём установлен python 3.11.16 (см. README всего проекта).
+Здесь и далее предполагается, что установлен pyenv и в нём установлен python 3.11.16 (см. README всего проекта).  
 
-Также предполагается, что запущен Qdrant (см. Задание 3).
+Также предполагается, что запущен Qdrant (см. Задание 3).  
 
-Чистим локальную коллекцию:
+База знаний полностью копируется в отдельный каталог, загрузка происходит в отдельную коллекцию wiki-cron-local - чтобы не влиять на последующие задания.  
 
-```
-curl -X DELETE http://localhost:6333/collections/wiki-local | jq .
-```
+Используется локальная модель.  
 
-"Устанавливаем" скрипты:
+Все настройки (cron, права на файлы) делаются для текущего пользователя.  
 
-```
-sudo mkdir -p /opt/practicum7/bin
+Коллекция Qdrant обновляется раз в минуту.
 
-sudo chown $(id -u):$(id -g) -R /opt/practicum7
+### Модельный скрипт - запуск
 
-cp upload.sh /opt/practicum7/bin/
-
-cd /opt/practicum7/bin/
-
-pyenv local 3.11.16
-
-cd -
-
-cp ../Task3/index_or_query.py /opt/practicum7/bin/
-
-sudo mkdir -p /var/lib/practicum7/hashes
-
-sudo chown $(id -u):$(id -g) -R /var/lib/practicum7
-
-sudo mkdir -p /var/log/practicum7
-
-sudo chown $(id -u):$(id -g) -R /var/log/practicum7
-
-sudo mkdir -p /var/run/practicum7
-
-sudo chown $(id -u):$(id -g) -R /var/run/practicum7
-```
-
-Копируем wiki:
+Чистим локальную коллекцию (если требуется):  
 
 ```
-cp -r ../Task2/knowledge_base /var/lib/practicum7/
+curl -X DELETE http://localhost:6333/collections/wiki-cron-local | jq .
 ```
 
-"Откладываем в сторону" один файл:
+Устанавливаем скрипты:  
 
 ```
-mv /var/lib/practicum7/knowledge_base/Сёку.txt /tmp/
+sudo make install
 ```
 
-Настраиваем cron:
+Эта команда:  
 
-```
-crontab -e
+* Создаёт каталоги и копирует скрипты
+* Копирует базу знаний без одного файла Сёку.txt, ID 9
+* Настраивает cron раз в минуту
 
-* * * * * /opt/practicum7/bin/upload.sh
-```
-
-Смотрим log (через несколько минут, примерно 4 минуты на моём ноутбуке):
+Смотрим log (через несколько минут, примерно 4 минуты на моём ноутбуке):  
 
 ```
 cat /var/log/practicum7/upload.log
 
-2026-09-27 22:44:15 | INFO     | started processing 86 new or changed wiki pages
-2026-09-27 22:47:13 | INFO     | successfully uploaded 116 chunks from 86 new or changed wiki pages, total collection size is 116
+2026-10-01 23:57:13 | INFO     | started processing 85 new, changed or deleted wiki pages
+2026-10-02 00:00:06 | INFO     | successfully uploaded 115 chunks from 85 new or changed wiki pages, 0 pages deleted, total collection size is 115
 ```
 
 Смотрим размер коллекции:
 
 ```
-curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
+curl -s -X POST http://localhost:6333/collections/wiki-cron-local/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
-116
+115
 ```
 
 Смотрим содержимое документов с ID 9 и 86:
 
 ```
-curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 'Content-Type: application/json' -d '{
+curl -s -X POST 'http://localhost:6333/collections/wiki-cron-local/points/scroll' -H 'Content-Type: application/json' -d '{
     "filter": {
       "must": [
         {
@@ -101,7 +73,7 @@ curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 
   }' | jq .
 ```
 
-Документ 9 отсутствует, в документе 86 слово "способен":
+\- документ 9 отсутствует, в документе 86 слово "способен":
 
 ```
 {
@@ -124,22 +96,22 @@ curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 
 }
 ```
 
-Смотрим ещё через минуту:
+Смотрим ещё через некоторое время:
 
 ```
 cat /var/log/practicum7/upload.log
 
-2026-09-27 22:48:16 | INFO     | nothing to upload
+...
+
+2026-10-02 00:01:14 | INFO     | nothing to upload or delete
 ```
 
 \- загружать нечего.
 
-Возвращаем отложенный файл и меняем другой:
+Копируем недостающий файл и меняем другой:
 
 ```
-mv /tmp/Сёку.txt /var/lib/practicum7/knowledge_base/Сёку.txt
-
-sed -i s/способен/способный/g /var/lib/practicum7/knowledge_base/Мышь.txt
+cp ../Task2/knowledge_base/Сёку.txt /var/lib/practicum7/knowledge_base/ && sed -i s/способен/способный/g /var/lib/practicum7/knowledge_base/Мышь.txt
 ```
 
 Ждём и смотрим в лог:
@@ -147,14 +119,17 @@ sed -i s/способен/способный/g /var/lib/practicum7/knowledge_bas
 ```
 cat /var/log/practicum7/upload.log
 
-2026-09-27 22:56:16 | INFO     | started processing 2 new or changed wiki pages
-2026-09-27 22:56:17 | INFO     | successfully uploaded 2 chunks from 2 new or changed wiki pages, total collection size is 117
+...
+
+2026-10-02 00:02:13 | INFO     | started processing 2 new, changed or deleted wiki pages
+2026-10-02 00:02:14 | INFO     | successfully uploaded 2 chunks from 2 new or changed wiki pages, 0 pages deleted, total collection size is 116
+
 ```
 
 Смотрим размер коллекции:
 
 ```
-curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H 'Content-Type: application/json'   -d '{
+curl -s -X POST http://localhost:6333/collections/wiki-cron-local/points/count   -H 'Content-Type: application/json'   -d '{
     "exact": true
   }' | jq .result.count
 116
@@ -165,7 +140,7 @@ curl -s -X POST http://localhost:6333/collections/wiki-local/points/count   -H '
 Смотрим содержимое документов с ID 9 и 86:
 
 ```
-curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 'Content-Type: application/json' -d '{
+curl -s -X POST 'http://localhost:6333/collections/wiki-cron-local/points/scroll' -H 'Content-Type: application/json' -d '{
     "filter": {
       "must": [
         {
@@ -181,7 +156,7 @@ curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 
   }' | jq .
 ```
 
-Документ 9 появился, в документе 86 слово "способный":
+\- документ 9 появился, в документе 86 слово "способный":
 
 ```
 {
@@ -213,17 +188,95 @@ curl -s -X POST 'http://localhost:6333/collections/wiki-local/points/scroll' -H 
 }
 ```
 
-## Диаграммы.
+Удаляем файл с ID 86:
 
-Диаграмма контейнеров разработана с учётом двух источников - Confluence и Google Drive.
+```
+rm /var/lib/practicum7/knowledge_base/Мышь.txt
+```
 
-На диаграмме компонентов показан только экспорт из Google Drive.
+Ждём и смотрим в лог:
 
-Идея такая же, как в модельном скрипте - считаем хеши, изменённые файлы пишем в Qdrant.
+```
+cat /var/log/practicum7/upload.log
 
-Всё запускается на том же хосте из Задания 1.
+...
 
-Логи пишутся локально, в задании ничего нет про ELK и тп, потом можно их перенаправить через filebeat.
+2026-10-02 00:04:14 | INFO     | started processing 1 new, changed or deleted wiki pages
+2026-10-02 00:04:14 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 1 pages deleted, total collection size is 115
+```
+
+Смотрим размер коллекции:
+
+```
+curl -s -X POST http://localhost:6333/collections/wiki-cron-local/points/count   -H 'Content-Type: application/json'   -d '{
+    "exact": true
+  }' | jq .result.count
+115
+```
+
+\- удалился 1 документ.
+
+Смотрим содержимое документов с ID 9 и 86:
+
+```
+curl -s -X POST 'http://localhost:6333/collections/wiki-cron-local/points/scroll' -H 'Content-Type: application/json' -d '{
+    "filter": {
+      "must": [
+        {
+          "key": "page_id",
+          "match": {
+            "any": [9, 86]
+          }
+        }
+      ]
+    },
+    "with_payload": true,
+    "with_vector": false
+  }' | jq .
+```
+
+\- документ 86 удалён.
+
+Для окончательной проверки сделаем запрос к Qdrant:
+
+```
+ python /opt/practicum7/bin/index_or_query.py --collection wiki-cron-local --query "Какие бывают колдуны?" | head -15
+
+Query: Какие бывают колдуны?
+
+================================================================================
+#1  RRF=0.032522
+Title: Колдовская температура
+Page ID: 3
+Chunk: 1
+
+Title: Колдовская температура
+В Сером Патруле раскрывается природа силы Других. Колдовскую энергию производят люди и вообще все живые существа. Колдуны в большинстве случаев производят меньше энергии, чем люди: их "колдовская температура" ниже. Благодаря этому колдуны могут использовать энергию, производимую людьми. Таким образом, все Другие являются паразитами, хотя большинство из них об этом не знает. Чем ниже колдовская температура, тем сильнее Другой и тем выше его уровень.
+Самыми могущественными являются колдуны с нулевой температурой — Абсолютные, или нулевые колдуны. За всю историю вражды Дня и Ночи известны несколько подобных иных: Галина Молодецкая (дневной колдун), Марлон (дневной, затем ночной колдун), Юра Матушкин (упырь, искусственно увеличивший свою энергию до предела с помощью книги Сювятар).
+
+================================================================================
+#2  RRF=0.032266
+``` 
+
+По завершении тестирования убираем за собой:
+
+```
+sudo make uninstall
+```
+
+## Production решение
+
+Диаграмма контейнеров разработана с учётом двух источников - Confluence и Google Drive.  
+
+На диаграмме компонентов показан только экспорт из Google Drive.  
+
+Идея такая же, как в модельном скрипте - считаем хеши, изменённые файлы пишем в Qdrant.  
+
+Всё запускается на том же хосте из Задания 1.  
+
+Расписание - раз в сутки, в нерабочее время - это можно себе позволить т.к. компания расположена в Европе и не будет слишком широкого диапазона часовых поясов.  
+
+Логи пишутся локально, в задании ничего нет про ELK и тп, потом можно их перенаправить через filebeat.  
 
 ### Диаграмма контейнеров
 
