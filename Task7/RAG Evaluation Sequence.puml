@@ -8,10 +8,13 @@ actor Expert
 participant "Analyzer" as Analyzer
 participant "LLM judge model" as LLMJudge
 participant "Log" as Log
+participant "Sensitive data remover" as SensitiveDataRemover
 
 Expert -> LogAnalyzer: Provides reference answers
 LogAnalyzer -> Log: Reads the log, extracts questions and answers
 Log -> LogAnalyzer: Returns questions and answers
+LogAnalyzer -> SensitiveDataRemover: Removes sensitive data from questions and answers
+SensitiveDataRemover -> LogAnalyzer: Returns sanitized questions and answers
 LogAnalyzer -> LLMJudge: Sends the question and answer to the LLM judge model
 LLMJudge -> LogAnalyzer: Returns the evaluation result - scores
 LogAnalyzer -> Expert: Returns the evaluation results to the expert
