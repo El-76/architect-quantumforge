@@ -38,7 +38,7 @@ pyenv global 3.11.16
 pip install -r requirements.txt
 ```
 
-Также необходимы ```Docker```, утилиты ```make``` и ```jq```.  
+Также необходимы ```Docker```, утилиты ```make```, ```curl``` и ```jq```.  
 
 Нужен ```sudo``` на хосте.  
 

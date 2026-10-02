@@ -14,7 +14,9 @@
 
 Все настройки (cron, права на файлы) делаются для текущего пользователя.  
 
-Коллекция Qdrant обновляется раз в минуту.
+Коллекция Qdrant обновляется раз в минуту.  
+
+Логи обновления, соответствующие действиям в разделе ниже можно посмотреть в ```upload.log```.  
 
 ### Модельный скрипт - запуск
 
@@ -261,7 +263,7 @@ curl -s -X POST 'http://localhost:6333/collections/wiki-cron-local/points/scroll
 Для окончательной проверки сделаем запрос к Qdrant:
 
 ```
- python /opt/practicum7/bin/index_or_query.py --collection wiki-cron-local --query "Какие бывают колдуны?" | head -15
+python /opt/practicum7/bin/index_or_query.py --collection wiki-cron-local --query "Какие бывают колдуны?" | head -15
 
 Query: Какие бывают колдуны?
 

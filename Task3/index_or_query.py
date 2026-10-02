@@ -169,6 +169,24 @@ qdrant = QdrantClient(
     url=QDRANT_URL,
 )
 
+def cosine_similarity(v1, v2):
+    v1 = numpy.asarray(v1)
+    v2 = numpy.asarray(v2)
+
+    return numpy.dot(v1, v2) / (
+        numpy.linalg.norm(v1) * numpy.linalg.norm(v2)
+    )
+
+def compare(candidate: str, reference: str) -> float:
+    dense_embeddings = embed(
+        [candidate, reference],
+    )
+
+    return cosine_similarity(
+        dense_embeddings[0],
+        dense_embeddings[1],
+    )
+
 def query(query: str, limit: int):
     dense_embeddings = embed(
         [query],
@@ -279,6 +297,14 @@ def main():
         "--collection",
         help="Qdrant collection name",
     )
+    parser.add_argument(
+        "--candidate",
+        help="Candidate answer to compare",
+    )
+    parser.add_argument(
+        "--reference",
+        help="Reference answer to compare",
+    )
 
     args = parser.parse_args()
 
@@ -290,6 +316,11 @@ def main():
         qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-openai'
     else:
         qdrant_collection_name = f'{QDRANT_COLLECTION_NAME_PREFIX}-local'
+
+    if args.candidate is not None and args.reference is not None:
+        print(compare(args.candidate, args.reference))
+
+        exit(0)
 
     if args.query is not None:
         query(args.query, 5)

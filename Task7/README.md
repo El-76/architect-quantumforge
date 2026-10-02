@@ -1,15 +1,52 @@
-./ask.sh
+### Описание
 
-cp answers-local.jsonl answers-local-orig.jsonl
-cp answers-openai.jsonl answers-openai-orig.jsonl
+Для оценки используется техника LLM-as-a-judge - просим модель от OpenAI сравнить ответы с эталонными, назначив score и прокомментировать разницу.  
 
-rm ../Task2/knowledge_base/Слои\ Мрака.txt
-rm ../Task2/knowledge_base/Пакт.txt
-rm ../Task2/knowledge_base/Контроль.txt
+В качестве эталона тоже использовались ответы модели OpenAI на полноценной базе знаний, оценивались ответы, которые выдавала:  
 
-../Task3/index.sh
+* Локальная модель с неполной базой знаний
+* Локальная модель
+* OpenAI с неполной с неполной базой знаний
+
+Анализ производился рядом скриптов:  
+
+* ```ask.sh``` - задаёт вопросы из ```golden-set.txt``` локальной модели и OpenAI, записывает вопросы и ответы в пару файлов ```answers-local.jsonl``` и ```answers-openai.jsonl``` соответственно
+* ```make_dataset.py``` - склеивает два jsonl-файла в формате предыдущего скрипта и делает jsonl с вопросом и парой ответов - эталон и оцениваемый ответ
+* ```evaluate.sh``` - передаёт файл с вопросом, эталонным и оцениваемым ответами в модель OpenAI с промптом - просьбой оценить ответ по шкале 1 - 0.8 - 0.5 - 0.0 и описать причину
+* ```semantic-similarity.sh``` - считает косинусное расстояние между эмбеддингами эталонного и оцениваемого ответов, эмбеддинги строятся только локальной моделью
+
+Надо понимать, что такой способ не подойдёт для Production-решения из задачи т.к. произойдёт утечка данных.  
+
+Для Production-решения можно попробовать сравнить эмбеддинги эталонного (предоставленного экспертами) ответа и оцениваемого ответов, а также просто привлечь экспертов на ограниченном объёме вопросов по разным темам.
+
+### Оценка
+
+Задаём вопросы на полной базе знений:
 
 ```
+./ask.sh
+```
+
+Сохраняем результаты:
+
+```
+cp answers-local.jsonl answers-local-orig.jsonl
+cp answers-openai.jsonl answers-openai-orig.jsonl
+```
+
+Удаляем ключевые статьи:
+
+```
+mv ../Task2/knowledge_base/Слои\ Мрака.txt /tmp/
+mv ../Task2/knowledge_base/Пакт.txt /tmp
+mv ../Task2/knowledge_base/Контроль.txt /tmp
+```
+
+Перестраиваем коллекцию Qdrant:
+
+```
+../Task3/index.sh
+
 Building embeddings with local model...
 2026-09-29 14:50:25 | INFO     | started processing 3 new, changed or deleted wiki pages
 2026-09-29 14:50:25 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 3 pages deleted, total collection size is 108
@@ -27,74 +64,53 @@ user    0m8.538s
 sys     0m1.638s
 ```
 
-./ask.sh
+Задаём вопросы на неполной базе знений:
 
+```
+./ask.sh
+```
+
+Генерируем файлы с парами эталон-факт, в качестве эталона везде берутся ответы OpenAI на полной базе и отдаём на оценку модели OpenAI.  
+
+
+Локальная модель, неполная база:
+
+```
 python make_dataset.py answers-local.jsonl answers-openai-orig.jsonl > reference-local-cut-vs-openai.jsonl
 
 ./evaluate.sh reference-local-cut-vs-openai.jsonl | tee evaluation-local-cut-vs-openai.jsonl
+``
 
+Модель OpenAI, неполная база:
+
+```
 python make_dataset.py answers-openai.jsonl answers-openai-orig.jsonl > reference-openai-cut-vs-openai.jsonl
 
 ./evaluate.sh reference-openai-cut-vs-openai.jsonl | tee evaluation-openai-cut-vs-openai.jsonl
+```
 
+Локальная модель, полная база:
+
+```
 python make_dataset.py answers-local-orig.jsonl answers-openai-orig.jsonl > reference-local-vs-openai.jsonl
 
 ./evaluate.sh reference-local-vs-openai.jsonl | tee evaluation-local-vs-openai.jsonl
+```
+
+Смотрим семантическую близость ответов - расстояние между эмбеддингами эталона и оцениваемого ответа, модель эмбеддингов - локальная.
+
+Локальная модель, неполная база:
+
+```
+./semantic-similarity.sh reference-local-cut-vs-openai.jsonl | tee semantic-similarity-local-cut-vs-openai.jso
+```
+
+Локальная модель, полная база:
+
+```
+./semantic-similarity.sh reference-local-vs-openai.jsonl | tee semantic-similarity-local-vs-openai.jsonl
+```
+
+### Анализ результатов
 
 
-
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh 'Есть ли договорённости между Дневными и Ночными?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-Действительно, между Дневными и Ночной сторонами заключен "Великий Пакт о перемирии".
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh --openai-embeddings --openai-llm 'Есть ли договорённости между Дневными и Ночными?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-Да. Дневные и Ночные Другие подписали **«Великий Пакт о перемирии»**, чтобы не уничтожить друг друга. За его соблюдением следит **Контроль**, состоящий из Дневных и Ночных колдунов.
-maaaah@debian:~/architect-quantumforge/Task7$ vim README.md
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh 'Еcть ли какая-то третья сила, помимо Дневных и Ночных?'                                 Invalid model-index. Not loading eval results into CardData.
-Answer:
-Ничего подобного нет в базе знаний.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh --openai-embeddings --openai-llm 'Еcть ли какая-то третья сила, помимо Дневных и Ночных?'Invalid model-index. Not loading eval results into CardData.
-Answer:
-Согласно базе знаний, третья сила не упоминается: существуют две Первородные Энергии — День и Ночь, которым соответствуют Дневные и Ночные Другие.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh 'Ограничивает ли кто-то Дневных и Ночных в своих действиях?'                             Invalid model-index. Not loading eval results into CardData.
-Answer:
-Дневные и Ночные имеют свои собственные принципы поведения:
-
-1. **Дневные**:
-   - Они обычно являются альтруистами.
-   - Не склонны хотеть изменять мир.
-   - Свобода воли; свобода действовать так, как они хотят этого сам.
-
-2. **Ночные**:
-   - Наоборот, ярко выраженные эгоисты и индивидуалисты.
-   - Главная ценность для них — свобода.
-   - Не стремятся менять мир.
-   - В отличии от Дневных, они предпочитают быть свободными без необходимости найти моральные обоснования.
-
-Таким образом, эти две группы людей ограничивают друг друга по своим ценностям и принципам поведения.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh --openai-embeddings --openai-llm 'Ограничивает ли кто-то Дневных и Ночных в своих действиях?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-Да. Действия Дневных и Ночных ограничивает Великий Пакт: вмешательство Дневных в жизнь людей ограничено его условиями, а совершённое ими вмешательство может дать Ночным право на аналогичное по энергии вмешательство.
-
-Кроме того, их сдерживает баланс между Днём и Ночью. Чрезмерное усиление Дня в конечном итоге может привести к появлению Отражения и серьёзному ущербу Дню. У Ночных также есть идеологические ограничения, но конкретный механизм контроля их действий в базе знаний не описан.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh 'Контролирует ли кто-то Дневных и Ночных?'                                               Invalid model-index. Not loading eval results into CardData.
-Answer:
-Да, контролируется Дневными и Ночными. Контроль состоит как из Ночных, так и из Дневных колдунов.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh --openai-embeddings --openai-llm 'Контролирует ли кто-то Дневных и Ночных?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-Да. За соблюдением Великого Пакта о перемирии следит **Контроль**, состоящий из Дневных и Ночных колдунов. Он карает нарушителей пакта.
-
-Кроме того, **Чёрный Патруль** из Дневных следит за Ночными, а **Белый Патруль** из Ночных — за Дневными.
-
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh 'Сколько слоёв во мраке?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-Мрак состоит из нескольких слоёв: первый, второй и шестой.
-maaaah@debian:~/architect-quantumforge/Task7$ ../Task4/rag_query.sh --openai-embeddings --openai-llm 'Сколько слоёв во мраке?'
-Invalid model-index. Not loading eval results into CardData.
-Answer:
-В Мраке шесть слоёв.
