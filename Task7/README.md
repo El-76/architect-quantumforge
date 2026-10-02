@@ -79,7 +79,7 @@ sys     0m1.638s
 python make_dataset.py answers-local.jsonl answers-openai-orig.jsonl > reference-local-cut-vs-openai.jsonl
 
 ./evaluate.sh reference-local-cut-vs-openai.jsonl | tee evaluation-local-cut-vs-openai.jsonl
-``
+```
 
 Модель OpenAI, неполная база:
 
@@ -111,6 +111,30 @@ python make_dataset.py answers-local-orig.jsonl answers-openai-orig.jsonl > refe
 ./semantic-similarity.sh reference-local-vs-openai.jsonl | tee semantic-similarity-local-vs-openai.jsonl
 ```
 
+Модель OpenAI, неполная база:
+
+```
+./semantic-similarity.sh reference-openai-cut-vs-openai.jsonl | tee semantic-similarity-openai-cut-vs-openai.jsonl
+```
+
 ### Анализ результатов
 
+Ниже приведены таблицы оценки ответов с привлечением LLM OpenAI и с расстоянием между эмбеддинагми ответов. Косинусное расстояние между ответами OpenAI на полной и неполной базах считалось по эмбеддингам локальной можели, что немного не логично, но для иллюстрации подхода - приемлемо.
+
+* local cut - локальная неполная база знаний vs OpenAI
+* local - локальная полная база знаний vs OpenAI
+* openai cut - OpenAI неполная база знаний vs OpenAI
+
+| Question | LLM Score local cut | Cosine local cut | LLM Score local | Cosine local | LLM Score openai cut | Cosine openai cut |
+|:--|--:|--:|--:|--:|--:|--:|
+| Где произрастает красный бархат? | 0.0 | 0.476510 | 0.0 | 0.913955 | 0.8 | 0.734753 |
+| Еcть ли какая-то третья сила, помимо Дневных и Ночных? | 0.8 | 0.168784 | 0.5 | 0.168784 | 1.0 | 0.841750 |
+| Есть ли договорённости между Дневными и Ночными? | 0.0 | 0.461196 | 0.8 | 0.799081 | 0.0 | 0.530264 |
+| Контролирует ли кто-то Дневных и Ночных? | 0.0 | 0.014892 | 0.8 | 0.680876 | 0.0 | 0.497660 |
+| Кто такой Артём Молодецкий? | 0.5 | 0.786161 | 0.5 | 0.707452 | 1.0 | 0.933854 |
+| Может ли обычный человек стать колдуном? | 0.5 | 0.901089 | 0.5 | 0.934531 | 0.8 | 0.906256 |
+| Много ли произведений создал Демченко? | 0.5 | 0.720616 | 0.8 | 0.720616 | 0.8 | 0.944835 |
+| Мультизвери - сильные колдуны? | 0.0 | 0.874725 | 0.0 | 0.868389 | 0.8 | 0.843535 |
+| Ограничивает ли кто-то Дневных и Ночных в своих действиях? | 0.5 | 0.561152 | 0.0 | 0.194251 | 0.8 | 0.894293 |
+| Сколько слоёв во мраке? | 1.0 | 0.608207 | 1.0 | 0.769937 | 1.0 | 0.825735 |
 
