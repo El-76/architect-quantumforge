@@ -1,0 +1,32 @@
+@startuml RAG Query Sequence
+
+!include <C4/C4_Sequence>
+
+title Quantumforge RAG Sequence Diagram
+
+actor User
+participant "Bot" as Bot
+participant "Injection classifier" as Classifier
+participant "Embeddings model" as Embeddings
+participant "Qdrant" as Qdrant
+participant "LLM model" as LLM
+participant "Log" as Log
+
+User -> Bot: Sends a question
+Bot -> Classifier: Classifies the question, tells if it contains injection or not
+Classifier -> Bot: Returns classification result
+Bot -> Embeddings: Generates embeddings for the question
+Embeddings -> Bot: Returns embeddings
+Bot -> Qdrant: Searches for relevant documents using the embeddings
+Qdrant -> Bot: Returns relevant documents
+Bot -> Classifier: Classifies chunks from Qdrant, tells if they contain injection or not
+Classifier -> Bot: Returns classification result
+Bot -> LLM: Sends the question and relevant documents to the LLM
+LLM -> Bot: Returns the answer
+Bot -> Log: Writes the answer and the question to the log
+Bot -> User: Returns the answer to the user
+
+
+
+
+@enduml
