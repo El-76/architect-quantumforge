@@ -1,0 +1,29 @@
+@startuml Container
+
+title Quantumforge RAG Autoupdater Container Diagram
+
+!include <C4/C4_Component>
+
+System_Ext(Confluence, "Confluence", "Confluence")
+System_Ext(GoogleDrive, "Google Drive", "Google Drive")
+
+System_Boundary(RAGSystem, "RAG System", "RAG knowledge base") {
+    Container(ConfluenceExporter, "ConfluenceExporter", "Confluence exporter, cron-scheduled app")
+    ContainerDb(ConfluenceExporterDB, "ConfluenceExporterDB", "Holds last successful export timestamp")
+
+    Container(GoogleDriveExporter, "GoogleDriveExporter", "Confluence exporter, cron-scheduled app")
+    ContainerDb(GoogleDriveExporterDB, "GoogleDriveExporterDB", "Holds file names, hashes and IDs")
+
+    ContainerDb(QdrantDB, "QdrantDB", "Vector database")
+}
+
+Rel(Confluence, ConfluenceExporter, "Uses API to query for changed documents and updloads them to Qdrant")
+Rel(GoogleDrive, GoogleDriveExporter, "Downloads changed files, manually tracks changes and updloads them to Qdrant")
+
+Rel(ConfluenceExporter, ConfluenceExporterDB, "Stores upload state")
+Rel(GoogleDriveExporter, GoogleDriveExporterDB, "Stores upload state, file hashes to track changes")
+
+Rel(ConfluenceExporter, QdrantDB, "Stores vectors")
+Rel(GoogleDriveExporter, QdrantDB, "Stores vectors")
+
+@enduml

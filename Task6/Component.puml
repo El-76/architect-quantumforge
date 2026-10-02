@@ -1,0 +1,34 @@
+@startuml Component
+
+title Quantumforge RAG Google Drive Autoupdater Component Diagram
+
+!include <C4/C4_Component>
+
+System_Ext(GoogleDrive, "Google Drive", "Google Drive")
+
+Container_Boundary(GoogleDriveExporter, "GoogleDriveExporter") {
+    Component(ChangedFilesDetector, "ChangedFilesDetector", "Detects changed files")
+    Component(ChunkingTokenizer, "ChunkingTokenizer", "Tokenizer, splits documents into chunks")
+    Component(EmbeddingsGenerator, "EmbeddingsGenerator", "Generates dense and sparse embeddings")
+    Component(QdrantUploader, "QdrantUploader", "Uploads embeddings to Qdrant")
+}
+
+note right of GoogleDriveExporter
+    All components are physically in the same script.
+    The script runs periodically via cron on the same machine as Qdrant.
+    Logs are written locally with rotation.
+end note
+
+Rel(GoogleDrive, ChangedFilesDetector, "Files")
+
+Rel(ChangedFilesDetector, ChunkingTokenizer, "Changed files")
+Rel(ChunkingTokenizer, EmbeddingsGenerator, "Chunks")
+Rel(EmbeddingsGenerator, QdrantUploader, "Embeddings")
+
+ContainerDb(GoogleDriveExporterDB, "GoogleDriveExporterDB", "Holds file names, hashes and IDs")
+ContainerDb(QdrantDB, "QdrantDB", "Vector database")
+
+BiRel(ChangedFilesDetector, GoogleDriveExporterDB, "File hashes, IDs etc")
+Rel(QdrantUploader, QdrantDB, "Embeddings")
+
+@enduml
