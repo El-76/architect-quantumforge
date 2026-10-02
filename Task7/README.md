@@ -2,6 +2,8 @@
 
 Для оценки используется техника LLM-as-a-judge - просим модель от OpenAI сравнить ответы с эталонными, назначив score и прокомментировать разницу.  
 
+Также была сделана попытка посчитать семантическую близость эталонных и оцениваемых ответов.
+
 В качестве эталона тоже использовались ответы модели OpenAI на полноценной базе знаний, оценивались ответы, которые выдавала:  
 
 * Локальная модель с неполной базой знаний
@@ -48,20 +50,20 @@ mv ../Task2/knowledge_base/Контроль.txt /tmp
 ../Task3/index.sh
 
 Building embeddings with local model...
-2026-09-29 14:50:25 | INFO     | started processing 3 new, changed or deleted wiki pages
-2026-09-29 14:50:25 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 3 pages deleted, total collection size is 108
+2026-10-02 12:57:29 | INFO     | started processing 3 new, changed or deleted wiki pages
+2026-10-02 12:57:29 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 3 pages deleted, total collection size is 108
 
-real    0m15.479s
-user    0m7.723s
-sys     0m3.440s
+real    0m14.275s
+user    0m6.690s
+sys     0m3.005s
 
 Building embeddings with OpenAI...
-2026-09-29 14:50:35 | INFO     | started processing 3 new, changed or deleted wiki pages
-2026-09-29 14:50:35 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 3 pages deleted, total collection size is 130
+2026-10-02 12:57:40 | INFO     | started processing 3 new, changed or deleted wiki pages
+2026-10-02 12:57:40 | INFO     | successfully uploaded 0 chunks from 0 new or changed wiki pages, 3 pages deleted, total collection size is 130
 
-real    0m9.883s
-user    0m8.538s
-sys     0m1.638s
+real    0m10.241s
+user    0m8.463s
+sys     0m1.321s
 ```
 
 Задаём вопросы на неполной базе знений:
@@ -115,6 +117,34 @@ python make_dataset.py answers-local-orig.jsonl answers-openai-orig.jsonl > refe
 
 ```
 ./semantic-similarity.sh reference-openai-cut-vs-openai.jsonl | tee semantic-similarity-openai-cut-vs-openai.jsonl
+```
+
+Восстанавливаем базу:
+
+```
+mv /tmp/Слои\ Мрака.txt ../Task2/knowledge_base/
+mv /tmp/Пакт.txt ../Task2/knowledge_base/
+mv /tmp/Контроль.txt ../Task2/knowledge_base/
+```
+
+```
+../Task3/index.sh
+
+Building embeddings with local model...
+2026-10-02 13:00:20 | INFO     | started processing 3 new, changed or deleted wiki pages
+2026-10-02 13:00:40 | INFO     | successfully uploaded 9 chunks from 3 new or changed wiki pages, 0 pages deleted, total collection size is 117
+
+real    0m36.342s
+user    0m43.017s
+sys     0m6.425s
+
+Building embeddings with OpenAI...
+2026-10-02 13:00:50 | INFO     | started processing 3 new, changed or deleted wiki pages
+2026-10-02 13:00:53 | INFO     | successfully uploaded 12 chunks from 3 new or changed wiki pages, 0 pages deleted, total collection size is 142
+
+real    0m14.315s
+user    0m8.015s
+sys     0m1.764s
 ```
 
 ### Анализ результатов
